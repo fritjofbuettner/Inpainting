@@ -3,7 +3,7 @@ import os
 from glob import glob
 import pandas as pd
 import numpy as np
-import cv2
+# import cv2
 from model import *
 from util import *
 from data.stl10_input import get_unlabeled_data, get_training_data, get_test_data
@@ -114,6 +114,7 @@ iters = 0
 loss_D_val = 0.
 loss_G_val = 0.
 
+
 for epoch in range(n_epochs):
     # trainset.index = range(len(trainset))
     # trainset = trainset.ix[np.random.permutation(len(trainset))]
@@ -157,15 +158,15 @@ for epoch in range(n_epochs):
                     rec_con = (255. * (img + 1) / 2.).astype(int)
 
                     rec_con[y:y + 64, x:x + 64] = rec_hid
-                    cv2.imwrite(os.path.join(result_path, 'img_' + str(ii) + '.' + str(int(iters / 100)) + '.jpg'),
-                                rec_con)
+                    # cv2.imwrite(os.path.join(result_path, 'img_' + str(ii) + '.' + str(int(iters / 100)) + '.jpg'),
+                    #             rec_con)
                     ii += 1
 
                 if iters == 0:
                     for test_image in test_images_ori:
                         test_image = (255. * (test_image + 1) / 2.).astype(int)
                         test_image[32:32 + 64, 32:32 + 64] = 0
-                        cv2.imwrite(os.path.join(result_path, 'img_' + str(ii) + '.ori.jpg'), test_image)
+                        # cv2.imwrite(os.path.join(result_path, 'img_' + str(ii) + '.ori.jpg'), test_image)
 
             print "========================================================================"
             print bn1_val.max(), bn1_val.min()
