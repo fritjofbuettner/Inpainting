@@ -30,8 +30,8 @@ if not os.path.exists(result_path):
     os.makedirs(result_path)
 
 GRAYSCALE = True
-print "Loading Pretraining data..."
-X_pretrain = get_unlabeled_data(gray=GRAYSCALE)
+# print "Loading Pretraining data..."
+# X_pretrain = get_unlabeled_data(gray=GRAYSCALE)
 print("Loading labeled data...")
 X_train, Y_train = get_training_data(gray=GRAYSCALE)
 X_test, Y_test = get_test_data(gray=GRAYSCALE)
@@ -115,12 +115,12 @@ loss_D_val = 0.
 loss_G_val = 0.
 
 for epoch in range(n_epochs):
-    trainset.index = range(len(trainset))
-    trainset = trainset.ix[np.random.permutation(len(trainset))]
+    # trainset.index = range(len(trainset))
+    # trainset = trainset.ix[np.random.permutation(len(trainset))]
 
     for start, end in zip(
-            range(0, len(trainset), batch_size),
-            range(batch_size, len(trainset), batch_size)):
+            range(0, len(X_train), batch_size),
+            range(batch_size, len(X_train), batch_size)):
 
         images_ori = X_test[start:end]
 
