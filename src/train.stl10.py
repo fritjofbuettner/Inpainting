@@ -6,24 +6,22 @@ import numpy as np
 import cv2
 from model import *
 from util import *
+from data.stl10_input import get_unlabeled_data, get_training_data, get_test_data
 
 n_epochs = 10000
-learning_rate_val = 0.0003
+learning_rate_val = 0.002
 weight_decay_rate = 0.00001
 momentum = 0.9
-batch_size = 500
-lambda_recon = 0.9
-lambda_adv = 0.1
+batch_size = 100
+lambda_recon = 0.999
+lambda_adv = 0.001
 
 overlap_size = 7
 hiding_size = 64
 
-trainset_path = '../data/imagenet_trainset.pickle'
-testset_path = '../data/imagenet_testset.pickle'
-dataset_path = '/media/storage3/Study/data/imagenet/'
-model_path = '../models/imagenet/'
-result_path = '../results/imagenet/'
-pretrained_model_path = '../models/imagenet/model-0'
+result_path = '../results/stl-10/'
+model_path = '../models/stl-10/'
+pretrained_model_path = None
 
 if not os.path.exists(model_path):
     os.makedirs(model_path)
@@ -31,24 +29,20 @@ if not os.path.exists(model_path):
 if not os.path.exists(result_path):
     os.makedirs(result_path)
 
-if not os.path.exists(trainset_path) or not os.path.exists(testset_path):
-    imagenet_images = []
-    for dir, _, _, in os.walk(dataset_path):
-        imagenet_images.extend(glob(os.path.join(dir, '*.jpg')))
+GRAYSCALE = True
+print "Loading Pretraining data..."
+X_pretrain = get_unlabeled_data(gray=GRAYSCALE)
+print("Loading labeled data...")
+X_train, Y_train = get_training_data(gray=GRAYSCALE)
+X_test, Y_test = get_test_data(gray=GRAYSCALE)
 
-    imagenet_images = np.hstack(imagenet_images)
+X_train = np.rollaxis(X_train, 3, 1)
+X_test = np.rollaxis(X_test, 3, 1)
 
-    trainset = pd.DataFrame({'image_path': imagenet_images[:int(len(imagenet_images) * 0.9)]})
-    testset = pd.DataFrame({'image_path': imagenet_images[int(len(imagenet_images) * 0.9):]})
+# convert class vectors to binary class matrices, index from file starts at 1
+# Y_train = np_utils.to_categorical(Y_train - 1, nb_classes)
+# Y_test = np_utils.to_categorical(Y_test - 1, nb_classes)
 
-    trainset.to_pickle(trainset_path)
-    testset.to_pickle(testset_path)
-else:
-    trainset = pd.read_pickle(trainset_path)
-    testset = pd.read_pickle(testset_path)
-
-testset.index = range(len(testset))
-testset = testset.ix[np.random.permutation(len(testset))]
 is_train = tf.placeholder(tf.bool)
 
 learning_rate = tf.placeholder(tf.float32, [])
@@ -75,16 +69,16 @@ mask_overlap = 1 - mask_recon
 
 loss_recon_ori = tf.square(images_hiding - reconstruction)
 loss_recon_center = tf.reduce_mean(
-    tf.sqrt(1e-5 + tf.reduce_sum(loss_recon_ori * mask_recon, [1, 2, 3]))) / 10.  # Loss for non-overlapping region
+    tf.sqrt(1e-5 + tf.reduce_sum(loss_recon_ori * mask_recon, [1, 2, 3])))  # Loss for non-overlapping region
 loss_recon_overlap = tf.reduce_mean(
-    tf.sqrt(1e-5 + tf.reduce_sum(loss_recon_ori * mask_overlap, [1, 2, 3])))  # Loss for overlapping region
+    tf.sqrt(1e-5 + tf.reduce_sum(loss_recon_ori * mask_overlap, [1, 2, 3]))) * 10.  # Loss for overlapping region
 loss_recon = loss_recon_center + loss_recon_overlap
 
 loss_adv_D = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(adversarial_all, labels_D))
 loss_adv_G = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(adversarial_neg, labels_G))
 
 loss_G = loss_adv_G * lambda_adv + loss_recon * lambda_recon
-loss_D = loss_adv_D * lambda_adv
+loss_D = loss_adv_D  # * lambda_adv
 
 var_G = filter(lambda x: x.name.startswith('GEN'), tf.trainable_variables())
 var_D = filter(lambda x: x.name.startswith('DIS'), tf.trainable_variables())
@@ -95,16 +89,17 @@ W_D = filter(lambda x: x.name.endswith('W:0'), var_D)
 loss_G += weight_decay_rate * tf.reduce_mean(tf.pack(map(lambda x: tf.nn.l2_loss(x), W_G)))
 loss_D += weight_decay_rate * tf.reduce_mean(tf.pack(map(lambda x: tf.nn.l2_loss(x), W_D)))
 
-sess = tf.InteractiveSession()
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4)
+sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
 
-optimizer_G = tf.train.AdamOptimizer(learning_rate=learning_rate)
+optimizer_G = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=0.5)
 grads_vars_G = optimizer_G.compute_gradients(loss_G, var_list=var_G)
-grads_vars_G = map(lambda gv: [tf.clip_by_value(gv[0], -10., 10.), gv[1]], grads_vars_G)
+# grads_vars_G = map(lambda gv: [tf.clip_by_value(gv[0], -10., 10.), gv[1]], grads_vars_G)
 train_op_G = optimizer_G.apply_gradients(grads_vars_G)
 
-optimizer_D = tf.train.AdamOptimizer(learning_rate=learning_rate)
+optimizer_D = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=0.5)
 grads_vars_D = optimizer_D.compute_gradients(loss_D, var_list=var_D)
-grads_vars_D = map(lambda gv: [tf.clip_by_value(gv[0], -10., 10.), gv[1]], grads_vars_D)
+# grads_vars_D = map(lambda gv: [tf.clip_by_value(gv[0], -10., 10.), gv[1]], grads_vars_D)
 train_op_D = optimizer_D.apply_gradients(grads_vars_D)
 
 saver = tf.train.Saver(max_to_keep=100)
@@ -127,18 +122,20 @@ for epoch in range(n_epochs):
             range(0, len(trainset), batch_size),
             range(batch_size, len(trainset), batch_size)):
 
-        image_paths = trainset[start:end]['image_path'].values
-        images_ori = map(lambda x: load_image(x), image_paths)
+        images_ori = X_test[start:end]
+
+        if iters % 2 == 0:
+            images_ori = map(lambda img: img[:, ::-1, :], images_ori)
+
         is_none = np.sum(map(lambda x: x is None, images_ori))
         if is_none > 0: continue
 
-        images_crops = map(lambda x: crop_random(x), images_ori)
+        images_crops = map(lambda x: crop_random(x, x=32, y=32), images_ori)
         images, crops, _, _ = zip(*images_crops)
 
         # Printing activations every 10 iterations
         if iters % 100 == 0:
-            test_image_paths = testset[:batch_size]['image_path'].values
-            test_images_ori = map(lambda x: load_image(x), test_image_paths)
+            test_images_ori = X_test[:batch_size]
 
             test_images_crop = map(lambda x: crop_random(x, x=32, y=32), test_images_ori)
             test_images, test_crops, xs, ys = zip(*test_images_crop)
@@ -153,7 +150,7 @@ for epoch in range(n_epochs):
                 })
 
             # Generate result every 1000 iterations
-            if iters % 500 == 0:
+            if iters % 100 == 0:
                 ii = 0
                 for rec_val, img, x, y in zip(reconstruction_vals, test_images, xs, ys):
                     rec_hid = (255. * (rec_val + 1) / 2.).astype(int)
@@ -163,16 +160,12 @@ for epoch in range(n_epochs):
                     cv2.imwrite(os.path.join(result_path, 'img_' + str(ii) + '.' + str(int(iters / 100)) + '.jpg'),
                                 rec_con)
                     ii += 1
-                    if ii > 50: break
 
                 if iters == 0:
-                    ii = 0
                     for test_image in test_images_ori:
                         test_image = (255. * (test_image + 1) / 2.).astype(int)
                         test_image[32:32 + 64, 32:32 + 64] = 0
                         cv2.imwrite(os.path.join(result_path, 'img_' + str(ii) + '.ori.jpg'), test_image)
-                        ii += 1
-                        if ii > 50: break
 
             print "========================================================================"
             print bn1_val.max(), bn1_val.min()
@@ -205,17 +198,16 @@ for epoch in range(n_epochs):
                 is_train: True
             })
 
-        if iters % 10 == 0:
-            _, loss_D_val, adv_pos_val, adv_neg_val = sess.run(
-                [train_op_D, loss_D, adversarial_pos, adversarial_neg],
-                feed_dict={
-                    images_tf: images,
-                    images_hiding: crops,
-                    learning_rate: learning_rate_val,
-                    is_train: True
-                })
+        _, loss_D_val, adv_pos_val, adv_neg_val = sess.run(
+            [train_op_D, loss_D, adversarial_pos, adversarial_neg],
+            feed_dict={
+                images_tf: images,
+                images_hiding: crops,
+                learning_rate: learning_rate_val / 10.,
+                is_train: True
+            })
 
-            print "Iter:", iters, "Gen Loss:", loss_G_val, "Recon Loss:", loss_recon_val, "Gen ADV Loss:", loss_adv_G_val, "Dis Loss:", loss_D_val, "||||", adv_pos_val.mean(), adv_neg_val.min(), adv_neg_val.max()
+        print "Iter:", iters, "Gen Loss:", loss_G_val, "Recon Loss:", loss_recon_val, "Gen ADV Loss:", loss_adv_G_val, "Dis Loss:", loss_D_val, "||||", adv_pos_val.mean(), adv_neg_val.min(), adv_neg_val.max()
 
         iters += 1
 
