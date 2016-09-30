@@ -1,8 +1,8 @@
 import tensorflow as tf
 import numpy as np
 
-import cPickle
-import ipdb
+# import cPickle
+# import ipdb
 
 
 class Model():
