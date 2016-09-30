@@ -18,6 +18,7 @@ lambda_adv = 0.001
 
 overlap_size = 7
 hiding_size = 64
+image_size = 128
 
 result_path = '../results/stl-10/'
 model_path = '../models/stl-10/'
@@ -29,24 +30,25 @@ if not os.path.exists(model_path):
 if not os.path.exists(result_path):
     os.makedirs(result_path)
 
-GRAYSCALE = True
+GRAYSCALE = False
 # print "Loading Pretraining data..."
 # X_pretrain = get_unlabeled_data(gray=GRAYSCALE)
 print("Loading labeled data...")
 X_train, Y_train = get_training_data(gray=GRAYSCALE)
 X_test, Y_test = get_test_data(gray=GRAYSCALE)
 
-X_train = np.rollaxis(X_train, 3, 1)
-X_test = np.rollaxis(X_test, 3, 1)
-
+# X_train = np.rollaxis(X_train, 3, 1)
+# X_test = np.rollaxis(X_test, 3, 1)
 # convert class vectors to binary class matrices, index from file starts at 1
 # Y_train = np_utils.to_categorical(Y_train - 1, nb_classes)
 # Y_test = np_utils.to_categorical(Y_test - 1, nb_classes)
+print X_train.shape
+
 
 is_train = tf.placeholder(tf.bool)
 
 learning_rate = tf.placeholder(tf.float32, [])
-images_tf = tf.placeholder(tf.float32, [batch_size, 128, 128, 3], name="images")
+images_tf = tf.placeholder(tf.float32, [batch_size, image_size, image_size, 3], name="images")
 
 labels_D = tf.concat(0, [tf.ones([batch_size]), tf.zeros([batch_size])])
 labels_G = tf.ones([batch_size])
