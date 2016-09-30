@@ -46,7 +46,7 @@ X_test = read_all_images(path_to_data=get_file("stl10_binary/stl_Xtest_128px.bin
 # convert class vectors to binary class matrices, index from file starts at 1
 # Y_train = np_utils.to_categorical(Y_train - 1, nb_classes)
 # Y_test = np_utils.to_categorical(Y_test - 1, nb_classes)
-print X_train.shape
+print(X_train.shape)
 
 
 is_train = tf.placeholder(tf.bool)
@@ -73,6 +73,7 @@ mask_recon = tf.reshape(mask_recon, [hiding_size, hiding_size, 1])
 mask_recon = tf.concat(2, [mask_recon] * 3)
 mask_overlap = 1 - mask_recon
 
+# TODO plug in GCS loss here
 loss_recon_ori = tf.square(images_hiding - reconstruction)
 loss_recon_center = tf.reduce_mean(
     tf.sqrt(1e-5 + tf.reduce_sum(loss_recon_ori * mask_recon, [1, 2, 3])))  # Loss for non-overlapping region
