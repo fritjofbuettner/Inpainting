@@ -6,7 +6,7 @@ import numpy as np
 # import cv2
 from model import *
 from util import *
-from data.stl10_input import get_unlabeled_data, get_training_data, get_test_data
+from data.stl10_input import read_all_images, get_file
 
 n_epochs = 10000
 learning_rate_val = 0.002
@@ -34,9 +34,9 @@ GRAYSCALE = False
 # print "Loading Pretraining data..."
 # X_pretrain = get_unlabeled_data(gray=GRAYSCALE)
 print("Loading labeled data...")
-X_train, Y_train = get_training_data(gray=GRAYSCALE)
-X_test, Y_test = get_test_data(gray=GRAYSCALE)
-
+# X_train, Y_train = get_training_data(gray=GRAYSCALE)
+# X_test, Y_test = get_test_data(gray=GRAYSCALE)
+X_train = read_all_images(path_to_data=get_file("stl10_binary/stl_Xunlabeled_128px.bin"), img_size=image_size)
 # X_train = np.rollaxis(X_train, 3, 1)
 # X_test = np.rollaxis(X_test, 3, 1)
 # convert class vectors to binary class matrices, index from file starts at 1
