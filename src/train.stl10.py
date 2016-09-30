@@ -4,9 +4,12 @@ from glob import glob
 import pandas as pd
 import numpy as np
 # import cv2
+import datetime
 from model import *
 from util import *
 from data.stl10_input import read_all_images, get_file
+
+sys.stdout = Logger(filename=os.path.join(os.getcwd(), "stl-10_%s.log" % datetime.datetime.now().strftime("%Y-%m-%d_%H%M")))
 
 n_epochs = 10000
 learning_rate_val = 0.002

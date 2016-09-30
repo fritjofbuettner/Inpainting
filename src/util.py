@@ -3,6 +3,7 @@ import skimage.transform
 from PIL import ImageFile
 import os
 import ipdb
+import sys
 
 import numpy as np
 
@@ -54,3 +55,19 @@ def crop_random(image_ori, width=64, height=64, x=None, y=None, overlap=7):
     2] = 2 * 123. / 255. - 1.
 
     return image, crop, random_x, random_y
+
+
+class Logger(object):
+    def __init__(self, filename="logfile.log"):
+        self.terminal = sys.stdout
+        self.log = open(filename, "a")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        # this flush method is needed for python 3 compatibility.
+        # this handles the flush command by doing nothing.
+        # you might want to specify some extra behavior here.
+        pass
